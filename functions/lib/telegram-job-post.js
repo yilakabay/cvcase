@@ -1,7 +1,8 @@
 // functions/lib/telegram-job-post.js
 //
 // Shared core of "post an entire job posting to the public CVcase Jobs
-// Telegram channel" — originally lived only in post-job-telegram.js (the
+// Telegram channel" (@cvcase_jobs, see TELEGRAM_CHANNEL_ID) — originally
+// lived only in post-job-telegram.js (the
 // admin's manual "📣 Post to Telegram" button), factored out here so
 // scheduled-telegram-posts.js (the cron job that fires off a job at its
 // scheduledTelegramPostAt time) can post through the exact same path
