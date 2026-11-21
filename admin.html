@@ -1328,8 +1328,15 @@
     // isNGO / isRemote come from the free-AI job-filtering prompt's JSON
     // output (see that prompt's "Add NGO and Remote labels" section) —
     // carried straight through so the Telegram post and the job card/detail
-    // can show a 💎 NGO / 🌍 Remote badge next to the company name.
-    return { company, positions, isNGO: !!obj.isNGO, isRemote: !!obj.isRemote };
+    // can show a 💎 NGO / 🌍 Remote badge next to the company name. The AI
+    // doesn't reliably put these at the top level alongside "company" —
+    // in practice it has put them on each position object instead (e.g.
+    // {"company":"X","positions":[{"title":"...","isNGO":false,
+    // "isRemote":true}]}) — so read both: the top-level flag OR true on
+    // ANY position counts for the whole company's badge.
+    const isNGO = !!obj.isNGO || obj.positions.some(p => p && p.isNGO);
+    const isRemote = !!obj.isRemote || obj.positions.some(p => p && p.isRemote);
+    return { company, positions, isNGO, isRemote };
   }
 
   // True for the whole duration of a pasted-JSON batch — from the first
