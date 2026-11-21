@@ -181,7 +181,13 @@ async function postJobToTelegramChannel(jobsCol, job, jobId) {
     return lines.join('\n');
   });
 
-  const header = `<u><b>${escapeHtml(job.company)}</b></u>`;
+  // Inline badges next to the company name — 💎 for an NGO/non-profit
+  // employer, 🌍 for an explicitly remote position — set by the free-AI
+  // job-filtering prompt's isNGO/isRemote fields (see that prompt's "Add
+  // NGO and Remote labels" section). Absent/false on older postings made
+  // before this existed, so they just show no badge.
+  const badges = [job.isNGO && '💎 NGO', job.isRemote && '🌍 Remote'].filter(Boolean).join('  ');
+  const header = `<u><b>${escapeHtml(job.company)}</b></u>${badges ? `  ${badges}` : ''}`;
   const hasLogo = job.logo && /^data:image\/(png|jpe?g|webp);base64,/.test(job.logo);
   const TEXT_LIMIT = 4096;
 

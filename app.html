@@ -2221,6 +2221,19 @@
             return `<div class="${sizeClass} rounded-lg flex items-center justify-center flex-shrink-0 text-white font-bold text-sm" style="background:${bg};">${initial}</div>`;
         }
 
+        // Inline 💎 NGO / 🌍 Remote badges next to a company name, matching
+        // the same badges the Telegram post shows (see functions/lib/
+        // telegram-job-post.js). Set by the free-AI job-filtering prompt's
+        // isNGO/isRemote fields — both are simply absent/false on jobs
+        // posted before this existed, so no badge shows for those.
+        function jobBadgesHtml(job) {
+            if (!job) return '';
+            const badges = [];
+            if (job.isNGO) badges.push('<span class="ml-1.5 flex-shrink-0 text-[0.7rem] font-semibold normal-case tracking-normal text-violet-600 dark:text-violet-400">💎 NGO</span>');
+            if (job.isRemote) badges.push('<span class="ml-1.5 flex-shrink-0 text-[0.7rem] font-semibold normal-case tracking-normal text-teal-600 dark:text-teal-400">🌍 Remote</span>');
+            return badges.join('');
+        }
+
         // Upwork-style highlight: wraps matched keyword(s) in an orange <mark>
         function highlightTerms(text, term) {
             const escaped = escapeHtmlJob(text);
@@ -2308,7 +2321,10 @@
                         <div class="flex items-start gap-2.5 min-w-0 mb-1">
                             ${jobLogoHtml(job)}
                             <div class="min-w-0">
-                                <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide truncate">${highlightTerms(job.company, term)}</p>
+                                <div class="flex items-center min-w-0">
+                                    <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide truncate">${highlightTerms(job.company, term)}</p>
+                                    ${jobBadgesHtml(job)}
+                                </div>
                                 ${items.length > 1 ? `<p class="text-[0.7rem] text-gray-400 dark:text-gray-500">${items.length} open positions</p>` : ''}
                             </div>
                         </div>
@@ -2838,6 +2854,7 @@
 
             document.getElementById('jobDetailLogoWrap').innerHTML = jobLogoHtml(job, 'w-12 h-12');
             document.getElementById('jobDetailCompany').textContent    = job.company;
+            document.getElementById('jobDetailBadges').innerHTML       = jobBadgesHtml(job);
             document.getElementById('jobDetailTitle').textContent      = pos.title;
             document.getElementById('jobDetailSalary').textContent     = pos.salary;
             document.getElementById('jobDetailExpiry').textContent     = 'Due ' + pos.expireDate;
@@ -7029,7 +7046,10 @@
             <div class="flex items-start gap-3 min-w-0">
                 <div id="jobDetailLogoWrap" class="flex-shrink-0"></div>
                 <div class="min-w-0">
-                    <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide" id="jobDetailCompany"></p>
+                    <div class="flex items-center">
+                        <p class="text-xs font-bold text-indigo-500 uppercase tracking-wide" id="jobDetailCompany"></p>
+                        <span id="jobDetailBadges"></span>
+                    </div>
                     <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100" id="jobDetailTitle"></h3>
                 </div>
             </div>

@@ -224,6 +224,13 @@ exports.handler = async (event, context) => {
         sourceUrl:  job.sourceUrl ? job.sourceUrl.toString().trim() : null,
         logo,
         positions:  job.positions.map(sanitizePosition),
+        // From the free-AI job-filtering prompt's JSON output — drives the
+        // 💎 NGO / 🌍 Remote badge on the Telegram post and the app's job
+        // card/detail view. Both default false when the pasted JSON omits
+        // them (e.g. jobs created through the paid refine-job-posting flow,
+        // which doesn't set these yet).
+        isNGO:      !!job.isNGO,
+        isRemote:   !!job.isRemote,
         status:     'active',
         createdAt:  new Date(),
         updatedAt:  new Date()
@@ -243,6 +250,8 @@ exports.handler = async (event, context) => {
       if (job.company) update.company = job.company.toString().trim();
       if (Array.isArray(job.positions)) update.positions = job.positions.map(sanitizePosition);
       if (job.status) update.status = job.status;
+      if (job.isNGO !== undefined) update.isNGO = !!job.isNGO;
+      if (job.isRemote !== undefined) update.isRemote = !!job.isRemote;
       if (job.logoBase64 !== undefined) {
         if (job.logoBase64 === null) {
           update.logo = null;

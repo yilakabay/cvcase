@@ -1325,7 +1325,11 @@
         emailNeedsReview: !!p.emailProtected && !String(p.applicationEmail || '').trim()
       };
     });
-    return { company, positions };
+    // isNGO / isRemote come from the free-AI job-filtering prompt's JSON
+    // output (see that prompt's "Add NGO and Remote labels" section) —
+    // carried straight through so the Telegram post and the job card/detail
+    // can show a 💎 NGO / 🌍 Remote badge next to the company name.
+    return { company, positions, isNGO: !!obj.isNGO, isRemote: !!obj.isRemote };
   }
 
   // True for the whole duration of a pasted-JSON batch — from the first
@@ -1364,7 +1368,7 @@
     jpPasteQueue = normalized.slice(1);
     jpPasteMode = true;
     const first = normalized[0];
-    jpStructured = { company: first.company, positions: first.positions, sourceUrl: null };
+    jpStructured = { company: first.company, positions: first.positions, sourceUrl: null, isNGO: first.isNGO, isRemote: first.isRemote };
     document.getElementById('jpPasteJson').value = '';
     renderPositionsEditor();
     updateJsonQueueStatus();
@@ -1378,7 +1382,7 @@
   function advancePasteQueue() {
     if (jpPasteQueue.length > 0) {
       const next = jpPasteQueue.shift();
-      jpStructured = { company: next.company, positions: next.positions, sourceUrl: null };
+      jpStructured = { company: next.company, positions: next.positions, sourceUrl: null, isNGO: next.isNGO, isRemote: next.isRemote };
       renderPositionsEditor();
       updateJsonQueueStatus();
       document.getElementById('jp-review-step').classList.remove('hidden');
@@ -1411,7 +1415,7 @@
     const target = input.value.trim();
     if (!target) { showToast('Type the company name to skip to.', 'error'); return; }
 
-    const remaining = [{ company: jpStructured.company, positions: jpStructured.positions }, ...jpPasteQueue];
+    const remaining = [{ company: jpStructured.company, positions: jpStructured.positions, isNGO: jpStructured.isNGO, isRemote: jpStructured.isRemote }, ...jpPasteQueue];
     const idx = remaining.findIndex(c => c.company.trim().toLowerCase() === target.toLowerCase());
     if (idx === -1) {
       showToast(`"${target}" isn't in the current or remaining queued companies.`, 'error');
@@ -1430,7 +1434,7 @@
     }
     const next = after[0];
     jpPasteQueue = after.slice(1);
-    jpStructured = { company: next.company, positions: next.positions, sourceUrl: null };
+    jpStructured = { company: next.company, positions: next.positions, sourceUrl: null, isNGO: next.isNGO, isRemote: next.isRemote };
     renderPositionsEditor();
     updateJsonQueueStatus();
     showToast(`Skipped past "${target}" — now showing ${next.company}.`, 'success');
@@ -1877,7 +1881,7 @@
       const { ok, data } = await api('manage-jobs', {
         token: adminToken,
         action: 'create',
-        job: { company, positions, sourceUrl: jpStructured.sourceUrl, logoBase64: jpStructured.logoBase64 || null }
+        job: { company, positions, sourceUrl: jpStructured.sourceUrl, logoBase64: jpStructured.logoBase64 || null, isNGO: !!jpStructured.isNGO, isRemote: !!jpStructured.isRemote }
       });
       if (!ok) throw new Error(data.error || 'Failed to post job.');
       showToast('Job posted!', 'success');
