@@ -296,7 +296,56 @@ exports.handler = async (event, context) => {
       return { statusCode: 200, body: JSON.stringify({ success: true }) };
     }
 
-    return { statusCode: 400, body: JSON.stringify({ error: 'Unknown action. Use create, list, get, update, or delete.' }) };
+    // ── bulkAutoSchedule ─────────────────────────────────────────────────────
+    // Admin gives a single window (hours + minutes) instead of picking a
+    // date/time per job one at a time. Every job not yet posted to Telegram
+    // gets an evenly-spaced scheduledTelegramPostAt somewhere inside
+    // [now, now + window], oldest unposted job first (so a backlog drains in
+    // the order it piled up) — relies entirely on the existing
+    // scheduled-telegram-posts.js cron to actually fire each post; this
+    // action only computes and writes the timestamps.
+    if (action === 'bulkAutoSchedule') {
+      const totalMinutes = Number(body.totalMinutes);
+      if (!Number.isFinite(totalMinutes) || totalMinutes <= 0) {
+        return { statusCode: 400, body: JSON.stringify({ error: 'totalMinutes must be a positive number.' }) };
+      }
+
+      // "Unposted" = never successfully sent as a full post (same definition
+      // admin.html's isPosted check uses: some telegramPosts entry has
+      // all:true). A job that's had a *partial* failed post (partial:true,
+      // no all:true entry) still counts as unposted and is eligible again.
+      const unposted = await jobsCol
+        .find({ status: { $ne: 'deleted' }, 'telegramPosts.all': { $ne: true } })
+        .sort({ createdAt: 1, _id: 1 }) // oldest first
+        .toArray();
+
+      if (unposted.length === 0) {
+        return { statusCode: 200, body: JSON.stringify({ success: true, scheduled: 0 }) };
+      }
+
+      const totalMs      = totalMinutes * 60000;
+      const intervalMs   = totalMs / unposted.length;
+      const now          = Date.now();
+      const bulkOps      = unposted.map((j, i) => ({
+        updateOne: {
+          filter: { _id: j._id },
+          update: { $set: { scheduledTelegramPostAt: new Date(now + intervalMs * (i + 1)), updatedAt: new Date() } }
+        }
+      }));
+      await jobsCol.bulkWrite(bulkOps);
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          success: true,
+          scheduled: unposted.length,
+          firstAt: new Date(now + intervalMs).toISOString(),
+          lastAt: new Date(now + intervalMs * unposted.length).toISOString()
+        })
+      };
+    }
+
+    return { statusCode: 400, body: JSON.stringify({ error: 'Unknown action. Use create, list, get, update, delete, or bulkAutoSchedule.' }) };
 
   } catch (error) {
     console.error('manage-jobs error:', error);

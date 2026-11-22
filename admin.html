@@ -566,6 +566,19 @@
             <h3 class="text-xs font-bold text-gray-500 uppercase tracking-wide">Posted Jobs</h3>
             <button onclick="loadPostedJobs()" class="text-xs text-emerald-600 hover:underline font-medium">↻ Refresh</button>
           </div>
+
+          <!-- Auto scheduler: spreads every currently-unposted job's Telegram
+               post evenly across a window starting now, oldest job first,
+               instead of setting each job's schedule by hand. -->
+          <div class="flex items-center gap-1.5 mb-3 bg-amber-50 border border-amber-100 rounded-lg p-2">
+            <span class="text-[0.7rem] text-amber-700 font-semibold flex-shrink-0">⏱ Auto-schedule all unposted over</span>
+            <input type="number" id="autoSchedHours" min="0" placeholder="hrs" class="w-14 text-[0.7rem] px-1.5 py-1 rounded border border-amber-200 text-center">
+            <span class="text-[0.7rem] text-amber-500">h</span>
+            <input type="number" id="autoSchedMinutes" min="0" max="59" placeholder="min" class="w-14 text-[0.7rem] px-1.5 py-1 rounded border border-amber-200 text-center">
+            <span class="text-[0.7rem] text-amber-500">m</span>
+            <button onclick="autoScheduleAllJobs(this)" class="text-[0.7rem] text-amber-700 hover:text-amber-900 font-semibold flex-shrink-0 ml-auto">Schedule All</button>
+          </div>
+
           <div id="postedJobsList" class="space-y-2 max-h-96 overflow-y-auto">
             <p class="text-xs text-gray-400 italic">Loading…</p>
           </div>
@@ -2033,6 +2046,39 @@
     } catch (err) {
       showToast(err.message, 'error');
       btn.disabled = false;
+    }
+  }
+
+  // Gives every currently-unposted job an evenly-spaced scheduledTelegramPostAt
+  // inside [now, now + window] (oldest unposted job gets the earliest slot),
+  // instead of the admin setting each job's schedule one at a time —
+  // manage-jobs.js's 'bulkAutoSchedule' action does the actual computing and
+  // writing; the existing every-5-minutes cron (scheduled-telegram-posts.js)
+  // is what then fires each post once its time arrives, same as a schedule
+  // set by hand.
+  async function autoScheduleAllJobs(btn) {
+    const hours   = parseFloat(document.getElementById('autoSchedHours').value) || 0;
+    const minutes = parseFloat(document.getElementById('autoSchedMinutes').value) || 0;
+    const totalMinutes = hours * 60 + minutes;
+    if (totalMinutes <= 0) { showToast('Enter an hours and/or minutes window first.', 'error'); return; }
+
+    const originalText = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Scheduling…';
+    try {
+      const { ok, data } = await api('manage-jobs', { token: adminToken, action: 'bulkAutoSchedule', totalMinutes });
+      if (!ok) throw new Error(data.error || 'Failed to auto-schedule.');
+      if (data.scheduled === 0) {
+        showToast('No unposted jobs to schedule.', 'success');
+      } else {
+        showToast(`Scheduled ${data.scheduled} job${data.scheduled !== 1 ? 's' : ''} — first at ${new Date(data.firstAt).toLocaleString()}, last at ${new Date(data.lastAt).toLocaleString()}.`, 'success');
+      }
+      document.getElementById('autoSchedHours').value = '';
+      document.getElementById('autoSchedMinutes').value = '';
+      loadPostedJobs();
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = originalText;
     }
   }
 
