@@ -24,6 +24,7 @@
 const { MongoClient } = require('mongodb');
 const crypto = require('crypto');
 const { generateSessionToken } = require('./lib/session');
+const { claimSignupBonus, signupBonusNotification } = require('./lib/signup-bonus');
 
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { maxPoolSize: 10, minPoolSize: 1, maxIdleTimeMS: 30000 });
@@ -173,7 +174,8 @@ exports.handler = async (event, context) => {
     // elsewhere in the backend, which is exactly the kind of bug that's easy
     // to miss until two phoneless users collide. Real phone numbers (09.../
     // 07...) never start with "tg_", so this can never collide with one.
-    const identifier = (tgLink && tgLink.phoneNumber) ? tgLink.phoneNumber : ('tg_' + tgUserId);
+    const identifier    = (tgLink && tgLink.phoneNumber) ? tgLink.phoneNumber : ('tg_' + tgUserId);
+    const realPhone     = (tgLink && tgLink.phoneNumber) ? tgLink.phoneNumber : null; // never the synthetic "tg_..." placeholder — see lib/signup-bonus.js
 
     // Defense-in-depth against exactly the "deleted account still shows my
     // old CV" report: a brand new account (no `users` doc existed for this
@@ -187,19 +189,26 @@ exports.handler = async (event, context) => {
       await db.collection('user_profiles').deleteOne({ userId: identifier });
     }
 
+    // Welcome gift: 100,000 CT, once per real-world person — gated on both
+    // tgUserId and (if shared) the real phone number so a deleted-and-
+    // recreated account under this same Telegram ID or phone can't collect
+    // it twice. See lib/signup-bonus.js for the full anti-abuse rationale.
+    const bonusAmount = await claimSignupBonus(db, { tgUserId, realPhoneNumber: realPhone });
+    const notifications = bonusAmount > 0 ? [signupBonusNotification(bonusAmount)] : [];
+
     await usersCol.insertOne({
       phoneNumber:    identifier,
       tgUserId,
       sessionToken,
-      balance:        0,      // legacy ETB field — unused
-      tokens:         0,      // CT balance — starts at 0, no free access
+      balance:        0,            // legacy ETB field — unused
+      tokens:         bonusAmount,  // CT balance — 100,000 welcome gift, or 0 if this identity already claimed it before
       tokensMigrated: true,
-      notifications:  [],
+      notifications,
       createdAt:      new Date(),
       lastLoginAt:    new Date()
     });
 
-    console.log(`Telegram user created: tgUserId=${tgUserId} phone=${identifier}`);
+    console.log(`Telegram user created: tgUserId=${tgUserId} phone=${identifier} welcomeBonus=${bonusAmount}`);
 
     return {
       statusCode: 200,
@@ -207,10 +216,10 @@ exports.handler = async (event, context) => {
         status:      'login',
         sessionToken,
         phoneNumber: identifier,
-        tokens:      0,
-        balance:     0,
-        notifications: [],
-        unreadCount: 0
+        tokens:      bonusAmount,
+        balance:     bonusAmount,
+        notifications,
+        unreadCount: notifications.length
       })
     };
 

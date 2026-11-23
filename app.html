@@ -3925,6 +3925,7 @@
             const a = `${Number(n.amount || 0).toFixed(2)} ETB`;
             if (n.type === 'payment_received')  return `We received your payment of ${a}. Reviewing now…`;
             if (n.type === 'plan_activated')    return n.tokens ? `${fmtCT(n.tokens)} CT added to your balance!` : `Your CT balance was updated.`;
+            if (n.type === 'signup_bonus')      return `Welcome! ${fmtCT(n.tokens)} CT gift added to your balance.`;
             if (n.type === 'payment_verified')  return `Your payment of ${a} has been verified.`;
             if (n.type === 'payment_rejected')  return n.refundEligible ? `Your payment of ${a} was not enough to buy CT.` : `Your payment could not be verified.`;
             if (n.type === 'refund_completed')  return `Your refund of ${a} has been processed.`;
@@ -3953,6 +3954,12 @@
                     body += n.overrideReason ? ` Reason: ${escapeHtmlJob(n.overrideReason)}.` : '';
                 }
                 return body;
+            }
+
+            if (n.type === 'signup_bonus') {
+                return `<strong>Welcome to CVcase!</strong> We've added a one-time <strong>${fmtCT(n.tokens)} CT</strong> welcome gift to your balance — no payment needed.`
+                    + `<br><br><strong>What is CT?</strong> CT (CVcase Tokens) is the balance that pays for the app's AI features — extracting and refining a job posting from a link or file, generating a tailored application letter, the AI job-fit check, and the AI chat assistant. Every AI action uses a small amount of CT based on how much work it actually takes.`
+                    + `<br><br>Your gift is enough to try these features for free. Once it runs low, you can top up any time from your account page — CT never expires.`;
             }
 
             if (n.type === 'payment_verified') return `Your payment of ${amt} has been verified and added to your account. Please sync your balance. Thank you for using CVcase!`;

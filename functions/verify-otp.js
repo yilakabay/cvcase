@@ -12,6 +12,7 @@
 
 const { MongoClient } = require('mongodb');
 const { generateSessionToken } = require('./lib/session');
+const { claimSignupBonus, signupBonusNotification } = require('./lib/signup-bonus');
 
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, { maxPoolSize: 10, minPoolSize: 1, maxIdleTimeMS: 30000 });
@@ -117,19 +118,26 @@ exports.handler = async (event, context) => {
       await db.collection('user_profiles').deleteOne({ userId: phoneNumber });
     }
 
+    // Welcome gift: 100,000 CT, once per real-world person — gated on both
+    // this phone number and (if already linked) a tgUserId, so a deleted-
+    // and-recreated account using the same phone or Telegram identity can't
+    // collect it twice. See lib/signup-bonus.js for the full rationale.
+    const bonusAmount = await claimSignupBonus(db, { tgUserId: tgRecord?.tgUserId || null, realPhoneNumber: phoneNumber });
+    const notifications = bonusAmount > 0 ? [signupBonusNotification(bonusAmount)] : [];
+
     await usersCol.insertOne({
       phoneNumber,
       tgUserId:       tgRecord?.tgUserId || null,
       sessionToken,
-      balance:        0,      // legacy ETB field — unused
-      tokens:         0,      // CT balance — starts at 0, no free access
+      balance:        0,            // legacy ETB field — unused
+      tokens:         bonusAmount,  // CT balance — 100,000 welcome gift, or 0 if this identity already claimed it before
       tokensMigrated: true,
-      notifications:  [],
+      notifications,
       createdAt:      new Date(),
       lastLoginAt:    new Date()
     });
 
-    console.log(`User created: ${phoneNumber} (tgUserId: ${tgRecord?.tgUserId || 'unknown'})`);
+    console.log(`User created: ${phoneNumber} (tgUserId: ${tgRecord?.tgUserId || 'unknown'}) welcomeBonus=${bonusAmount}`);
 
     return {
       statusCode: 201,
@@ -138,10 +146,10 @@ exports.handler = async (event, context) => {
         success:     true,
         sessionToken,
         phoneNumber,
-        tokens:      0,
-        balance:     0,
-        notifications: [],
-        unreadCount: 0
+        tokens:      bonusAmount,
+        balance:     bonusAmount,
+        notifications,
+        unreadCount: notifications.length
       })
     };
 

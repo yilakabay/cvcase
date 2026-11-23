@@ -35,9 +35,12 @@ function resolvePack(packId) {
 // Cheapest pack — anything below this can never buy tokens.
 const MIN_PACK_PRICE = Math.min(...Object.values(PACKS).map(p => p.price));
 
-// There is NO free gift: a new account starts with 0 CT and cannot use any AI
-// feature until it tops up. (Kept as a setting only so the migration script
-// has one obvious place to read it from.)
+// Unused by live signup anymore — kept only because migrate-to-tokens.js (a
+// one-off script already run against the pre-CT user base) reads it as the
+// grant for accounts that had no paid plan to migrate from. New signups'
+// actual welcome gift (100,000 CT) is defined in lib/signup-bonus.js
+// instead, since it also needs the anti-abuse claim tracking that one
+// constant alone can't express.
 const STARTER_TOKENS = 0;
 
 // What existing paid subscribers receive ONE time when you run
