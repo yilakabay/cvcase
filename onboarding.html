@@ -222,6 +222,13 @@ let accountReadyPromise = (async function ensureTelegramAccount() {
       localStorage.setItem('cv_userId', data.phoneNumber);
       localStorage.setItem('cv_sessionToken', data.sessionToken);
       localStorage.setItem('cv_userBalance', data.balance || 0);
+      // Brand-new Telegram account just got its one-time 100,000 CT welcome
+      // gift (telegram-auth.js) — stash it so app.html can surprise the user
+      // with a celebratory popup the first time it loads, same as the web
+      // OTP signup path (see login.html's persistSession).
+      if (data.tokens > 0) {
+        localStorage.setItem('cv_pendingWelcomeBonus', String(data.tokens));
+      }
     }
   } catch (e) {
     // Leave userId empty — saveProfileField() will no-op per field (same as

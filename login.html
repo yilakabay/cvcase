@@ -463,6 +463,14 @@ function persistSession(phone, data) {
     localStorage.setItem('cv_userBalance', data.balance || 0);
     localStorage.setItem('cv_lastActivity', Date.now());
 
+    // Brand-new account just got its one-time 100,000 CT welcome gift
+    // (verify-otp.js/telegram-auth.js) — stash the amount so app.html can
+    // surprise the user with a celebratory popup the first time it loads,
+    // then clear the flag so it never shows again on a later login.
+    if (data.status === 'new' && data.tokens > 0) {
+        localStorage.setItem('cv_pendingWelcomeBonus', String(data.tokens));
+    }
+
     // A brand-new account (verify-otp.js returns status:'new' the very first
     // time a phone verifies) goes to onboarding, same as a brand-new
     // Telegram signup — it was silently skipping this before and dropping

@@ -1845,6 +1845,16 @@
                 }
             } catch (_) {}
 
+            // Brand-new account's one-time 100,000 CT welcome gift — show it
+            // exactly once, then clear the flag so a later login never repeats it.
+            try {
+                const pendingBonus = parseInt(localStorage.getItem('cv_pendingWelcomeBonus') || '0', 10);
+                if (pendingBonus > 0) {
+                    localStorage.removeItem('cv_pendingWelcomeBonus');
+                    setTimeout(() => { try { showWelcomeBonusModal(pendingBonus); } catch (_) {} }, 400);
+                }
+            } catch (_) {}
+
             renderBalanceDisplays();
             renderPlanDisplays();
             attachEventListeners();
@@ -9144,6 +9154,26 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- ── Welcome Bonus Popup ──────────────────────────────────────────────
+     Shown exactly once, right after a brand-new account's very first
+     app.html load — surprises them with the one-time 100,000 CT welcome
+     gift (see login.html's persistSession / onboarding.html's
+     ensureTelegramAccount, which stash cv_pendingWelcomeBonus for this). -->
+<div id="welcomeBonusModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9995] px-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden dark:bg-gray-900 text-center">
+        <div style="background:linear-gradient(135deg,#f59e0b,#ec4899);padding:28px 20px 20px;">
+            <div style="font-size:2.5rem;line-height:1;">🎉</div>
+            <h2 class="text-white font-bold text-lg mt-2">Welcome to CVcase!</h2>
+            <p class="text-white text-2xl font-extrabold mt-1" id="welcomeBonusAmount">100,000 CT</p>
+        </div>
+        <div class="p-5">
+            <p class="text-sm text-gray-600 dark:text-gray-300">We've added a one-time <strong>welcome gift</strong> to your balance — no payment needed.</p>
+            <p class="text-xs text-gray-500 dark:text-gray-400 mt-3">CT (CVcase Tokens) pay for the app's AI features: extracting and refining job postings, generating application letters, building your CV with AI, the job-fit check, and AI chat. Spend it on any of them — your gift never expires.</p>
+            <button onclick="closeWelcomeBonusModal()" class="w-full mt-5 py-3 rounded-full font-bold text-sm text-white transition-all" style="background:linear-gradient(135deg,#f59e0b,#ec4899);">Awesome, let's go!</button>
+        </div>
+    </div>
+</div>
+
 <!-- ── Top Up CT Modal ───────────────────────────────────────────────── -->
 <div id="upgradeModal" class="hidden fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-[9994] px-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden dark:bg-gray-900" style="max-height:92vh;display:flex;flex-direction:column;">
@@ -9152,7 +9182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <h2 class="text-white font-bold text-base">Top Up CT</h2>
                 <button onclick="closeUpgradeModal()" class="text-white text-lg w-7 h-7 flex items-center justify-center rounded-full hover:bg-white hover:bg-opacity-20">✕</button>
             </div>
-            <p style="color:rgba(255,255,255,0.65);font-size:0.75rem;line-height:1.35;">CT (CVcase Tokens) pay for the app's AI features — extracting and refining job postings, generating application letters, building your CV with AI, the job-fit check, and AI chat. Pay as you go: 1 CT = 1 AI token, so every action only uses what it actually needs. Every new account also gets a one-time <strong>100,000 CT</strong> welcome gift to try these features free.</p>
+            <p style="color:rgba(255,255,255,0.65);font-size:0.75rem;line-height:1.35;">Pay as you go. 1 CT = 1 AI token — every letter, job search and CV chat only uses the CT it actually needs.</p>
         </div>
         <div class="p-4 flex flex-col gap-3" style="overflow-y:auto;">
             <div id="topupTabs" class="flex gap-2"></div>
@@ -9208,6 +9238,17 @@ function renderTopupModal() {
 
 function setTopupTier(t) { _topupTier = t; _selectedPackId = null; renderTopupModal(); }
 function selectTopupPack(id) { _selectedPackId = id; renderTopupModal(); }
+
+// Brand-new account's one-time 100,000 CT welcome gift — see window.onload's
+// cv_pendingWelcomeBonus check, which calls this exactly once.
+function showWelcomeBonusModal(amount) {
+    const el = document.getElementById('welcomeBonusAmount');
+    if (el) el.textContent = fmtCT(amount) + ' CT';
+    document.getElementById('welcomeBonusModal').classList.remove('hidden');
+}
+function closeWelcomeBonusModal() {
+    document.getElementById('welcomeBonusModal').classList.add('hidden');
+}
 
 function openUpgradeModal() {
     _selectedPackId = null;
