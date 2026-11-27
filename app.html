@@ -920,7 +920,14 @@
         }
 
         function attachEventListeners() {
-            const ids = { mergePdfBtn: mergePdfs, downloadPdfBtn: downloadMergedPdf, generateLetterBtn: generateLetter };
+            // mergePdfBtn and downloadPdfBtn already have inline onclick="..."
+            // on the <button> itself (see the #mergePdfBtn / #downloadPdfBtn
+            // markup) — registering them here too meant every click fired
+            // BOTH the inline handler and this one, so e.g. clicking "Send to
+            // Bot" on the merged PDF called downloadMergedPdf() twice and the
+            // file reached the Telegram bot twice per click. generateLetterBtn
+            // has no inline onclick, so it still needs binding here.
+            const ids = { generateLetterBtn: generateLetter };
             Object.entries(ids).forEach(([id, fn]) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); });
             (document.getElementById('cvFile') && document.getElementById('cvFile').addEventListener('change', handleCvFileSelect));
             (document.getElementById('jdFile') && document.getElementById('jdFile').addEventListener('change', handleJdFileSelect));
