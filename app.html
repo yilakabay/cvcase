@@ -4599,11 +4599,11 @@
         function downloadMergedPdf() {
             if (!mergedPdf) return;
             if (isRunningInTelegram()) {
-                sendPdfToTelegramBot(mergedPdf, 'cverve_merged.pdf');
+                sendPdfToTelegramBot(mergedPdf, 'cvcase_merged.pdf');
                 return;
             }
             const url = URL.createObjectURL(new Blob([mergedPdf], { type: 'application/pdf' }));
-            const a = Object.assign(document.createElement('a'), { href: url, download: 'cverve_merged.pdf' });
+            const a = Object.assign(document.createElement('a'), { href: url, download: 'cvcase_merged.pdf' });
             document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
         }
 
@@ -7768,7 +7768,7 @@
                                 <svg class="w-8 h-8 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                             </div>
                             <div class="text-center">
-                                <p class="font-semibold text-gray-800 dark:text-gray-100">cverve_merged.pdf</p>
+                                <p class="font-semibold text-gray-800 dark:text-gray-100">cvcase_merged.pdf</p>
                                 <p class="text-xs text-gray-400 mt-0.5 dark:text-gray-500">Merged PDF — ready to download</p>
                             </div>
                             <button onclick="downloadMergedPdf()" class="flex items-center gap-2 bg-emerald-500 text-white py-2.5 px-8 rounded-full font-semibold hover:bg-emerald-600 transition shadow-md">
@@ -8106,7 +8106,7 @@
                                     <svg class="w-5 h-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                                 </div>
                                 <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-semibold text-gray-800 truncate dark:text-gray-100">cverve_merged.pdf</p>
+                                    <p class="text-sm font-semibold text-gray-800 truncate dark:text-gray-100">cvcase_merged.pdf</p>
                                     <p class="text-xs text-gray-400 dark:text-gray-500">Merged PDF — ready</p>
                                 </div>
                             </div>
