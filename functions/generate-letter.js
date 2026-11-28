@@ -159,6 +159,16 @@ exports.handler = async (event, context) => {
     const chosenOpening = pickRandom(OPENING_STRATEGIES);
     const chosenClosing = pickRandom(CLOSING_STRATEGIES);
 
+    // app.html sends targetPosition as "<title> at <company>" (see its
+    // jobLetterGenerate flow) so the model above can tell apart same-titled
+    // roles at different companies when the JD source lists several
+    // postings. That's useful for the POSITION FILTERING instruction, but
+    // the subject line already gets the company name on its own separate
+    // line right above it (STRICT GUIDELINES item 3), so repeating
+    // "at <company>" in the subject too was pure duplication — strip it
+    // there and use the bare title only.
+    const subjectPosition = targetPosition.replace(/\s+at\s+.+$/i, '').trim() || targetPosition;
+
     const prompt = `
       TARGET POSITION: "${targetPosition}"
 
@@ -185,7 +195,7 @@ exports.handler = async (event, context) => {
       1. Total body length: exactly 3 paragraphs. Each paragraph is 3-4 sentences maximum. The entire letter body must fit in roughly two thirds of an A4 page — no more.
       2. Header block (no labels): Name, Phone, Email, Address, Date — each on its own line. This is the ONLY place phone and email should appear in the entire letter.
       3. Then the company name on its own line, by itself — extracted from the job description source. If the company name genuinely cannot be determined from the source, omit this line entirely rather than guessing.
-      4. Then, on the next line, a subject line in EXACTLY this format: "Subject: Application for the position of ${targetPosition}" — the literal word "Subject:" must be the first word of this line so it reads as a real subject line, not just another line of text. Do NOT repeat the company name here, since it already appears on its own line directly above. Do not vary this wording or drop the "Subject:" label, even to sound less formal — this one line is a fixed business-letter convention, not part of the warm/first-person voice described below.
+      4. Then, on the next line, a subject line in EXACTLY this format: "Subject: Application for the position of ${subjectPosition}" — the literal word "Subject:" must be the first word of this line so it reads as a real subject line, not just another line of text. Do NOT include the company name here (even if it's part of the target position given below) — it already appears on its own line directly above. Do not vary this wording or drop the "Subject:" label, even to sound less formal — this one line is a fixed business-letter convention, not part of the warm/first-person voice described below.
       5. Then "Dear Hiring Manager" (or recipient name if given in the JD).
       6. Paragraph 1: establish fit for "${targetPosition}", drawn directly from the CV and the role's requirements, factual and concrete, not generic — but follow this exact opening approach for THIS letter, and no other: ${chosenOpening}
       7. Paragraph 2: Highlight one or two concrete skills or experiences from the CV that directly match the job requirements. Be specific about what you did and how it relates to this role.
