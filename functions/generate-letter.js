@@ -67,6 +67,10 @@ const CLOSING_STRATEGIES = [
   'Close paragraph 3 with one honest sentence about why this specific opportunity stands out, then end with a short, varied invitation to talk further (e.g. naming a specific next step, or simply that you\'d welcome the chance to discuss it) — avoid stock phrasing about being "available at your convenience."',
   'Close paragraph 3 by stating plainly what interests the applicant about this particular team or mission, then a brief, naturally-worded closing sentence that avoids the word "convenience" or "whatever time suits."'
 ];
+// Sign-off right before the applicant's name — "Sincerely," every single
+// time is its own small fingerprint, so pick one valediction at random
+// per request too, same reasoning as the opening/closing strategies above.
+const SIGN_OFFS = ['Sincerely,', 'Best regards,', 'Kind regards,', 'Yours faithfully,', 'Respectfully,', 'Warm regards,'];
 function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 // ── Strip HTML tags and collapse whitespace ───────────────────────────────────
@@ -161,6 +165,7 @@ exports.handler = async (event, context) => {
 
     const chosenOpening = pickRandom(OPENING_STRATEGIES);
     const chosenClosing = pickRandom(CLOSING_STRATEGIES);
+    const chosenSignOff = pickRandom(SIGN_OFFS);
 
     // app.html sends targetPosition as "<title> at <company>" (see its
     // jobLetterGenerate flow) so the model above can tell apart same-titled
@@ -203,7 +208,7 @@ exports.handler = async (event, context) => {
       6. Paragraph 1: establish fit for "${targetPosition}", drawn directly from the CV and the role's requirements, factual and concrete, not generic — but follow this exact opening approach for THIS letter, and no other: ${chosenOpening}
       7. Paragraph 2: Highlight one or two concrete skills or experiences from the CV that directly match the job requirements. Be specific about what you did and how it relates to this role.
       8. Paragraph 3: Express genuine interest in the company/role, then close with availability for interview — but follow this exact closing approach for THIS letter, and no other: ${chosenClosing} Do NOT include phone number or email here — they are already in the header.
-      9. Close with "Sincerely," then the applicant's name.
+      9. Close with "${chosenSignOff}" then the applicant's name, on its own line below. Use this exact sign-off for THIS letter, and no other — do not substitute "Sincerely," or any other valediction.
       10. No bullet points, no bold text, no em dashes, no placeholders.
       11. Only mention GPA if it is 3.0 or above; omit the "/4.0" scale.
       12. Do not mention attaching documents.
