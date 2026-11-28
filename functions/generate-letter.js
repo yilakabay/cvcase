@@ -276,8 +276,15 @@ exports.handler = async (event, context) => {
       tokenBalance = result.tokenBalance;
     }
 
-    const letterText = fullText.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
+    let letterText = fullText.replace(/^```[a-z]*\n?/i, '').replace(/```$/,'').trim();
     if (!letterText) throw new AIError(500, 'We are unable to generate your letter right now. Please try again in a moment.');
+
+    // The model sometimes puts a blank line between the company name and
+    // the "Subject: ..." line (as intended, so the subject reads as its
+    // own block under the header) and sometimes doesn't, inconsistently
+    // across generations. Rather than leave that to chance, normalize it
+    // here: always exactly one blank line directly above the Subject line.
+    letterText = letterText.replace(/\n+(?=Subject:)/, '\n\n');
 
     console.log(`Letter generated for ${userId}: ${totalTokensUsed} CT charged`);
     return { statusCode: 200, body: JSON.stringify({ letterText, tokensUsed: totalTokensUsed, tokenBalance }) };
