@@ -34,6 +34,38 @@ function fetchUrl(url) {
   });
 }
 
+// ── Structural variety, picked per request ────────────────────────────────────
+// Root cause of "every CVcase letter reads like the same person/tool wrote it":
+// the old prompt told the model, in its STRICT GUIDELINES, to literally open
+// paragraph 1 by "stating the position you are applying for" — so almost
+// every letter started "I'm applying for the X role because...". It also
+// offered "What drew me to this role is..." as an EXAMPLE transitional
+// phrase, and the model took that as the answer rather than one option, so
+// it appeared near-verbatim in letter after letter, for every user, right
+// before an equally uniform "I'm available for an interview at
+// [whatever/any] time that suits you" closing line. Two users' letters
+// (or two letters for the same user, different jobs) ended up reading as
+// obviously AI-generated from the same template, which defeats the point.
+//
+// Fixed by picking ONE opening strategy and ONE closing strategy at random,
+// in code, per request — not left to the model's own (mode-seeking, so not
+// actually random) judgment — and by explicitly banning the exact phrases
+// that showed up as repeat offenders.
+const OPENING_STRATEGIES = [
+  'Open paragraph 1 with a brief, concrete fact or moment from the CV (something the applicant actually did), and only connect it to this specific role in the sentence after that — do not start by announcing "I am applying for..." or naming the role in the very first sentence.',
+  'Open paragraph 1 by naming the single strongest match between the applicant\'s background and what this role needs, stated as a direct, confident claim, before any mention of "applying."',
+  'Open paragraph 1 with a short observation about what this role actually requires (drawn from the job description), then pivot within the same paragraph to how the applicant already does that — the word "applying" should not be the first idea in the letter.',
+  'Open paragraph 1 by referencing the company or team\'s specific work (something concrete from the job description, not generic praise), then connect that to the applicant\'s relevant background.',
+  'Open paragraph 1 with the applicant\'s current role or most relevant recent experience as the very first clause, and only reach the position being applied for partway through the paragraph.'
+];
+const CLOSING_STRATEGIES = [
+  'Close paragraph 3 by tying genuine interest back to one specific, concrete detail from the job description (not generic enthusiasm), then a short, differently-worded sentence about being glad to discuss further — never the construction "I am available for an interview at [whatever/any] time that suits you."',
+  'Close paragraph 3 with a brief, confident sentence about what the applicant would focus on in the role\'s first few months, then a short closing line inviting a conversation, worded naturally and differently each time.',
+  'Close paragraph 3 with one honest sentence about why this specific opportunity stands out, then end with a short, varied invitation to talk further (e.g. naming a specific next step, or simply that you\'d welcome the chance to discuss it) — avoid stock phrasing about being "available at your convenience."',
+  'Close paragraph 3 by stating plainly what interests the applicant about this particular team or mission, then a brief, naturally-worded closing sentence that avoids the word "convenience" or "whatever time suits."'
+];
+function pickRandom(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
 // ── Strip HTML tags and collapse whitespace ───────────────────────────────────
 function htmlToText(html) {
   return html
@@ -124,6 +156,9 @@ exports.handler = async (event, context) => {
       sanitizedExtraPrompt = extraPrompt.trim().substring(0, MAX_EXTRA_PROMPT_LENGTH);
     }
 
+    const chosenOpening = pickRandom(OPENING_STRATEGIES);
+    const chosenClosing = pickRandom(CLOSING_STRATEGIES);
+
     const prompt = `
       TARGET POSITION: "${targetPosition}"
 
@@ -152,9 +187,9 @@ exports.handler = async (event, context) => {
       3. Then the company name on its own line, by itself — extracted from the job description source. If the company name genuinely cannot be determined from the source, omit this line entirely rather than guessing.
       4. Then, on the next line, a subject line in EXACTLY this format: "Subject: Application for the position of ${targetPosition}" — the literal word "Subject:" must be the first word of this line so it reads as a real subject line, not just another line of text. Do NOT repeat the company name here, since it already appears on its own line directly above. Do not vary this wording or drop the "Subject:" label, even to sound less formal — this one line is a fixed business-letter convention, not part of the warm/first-person voice described below.
       5. Then "Dear Hiring Manager" (or recipient name if given in the JD).
-      6. Paragraph 1: State the position you are applying for and one or two specific reasons you are a strong fit, drawn directly from the CV and the requirements for "${targetPosition}" only. Be factual and concrete, not generic.
+      6. Paragraph 1: establish fit for "${targetPosition}", drawn directly from the CV and the role's requirements, factual and concrete, not generic — but follow this exact opening approach for THIS letter, and no other: ${chosenOpening}
       7. Paragraph 2: Highlight one or two concrete skills or experiences from the CV that directly match the job requirements. Be specific about what you did and how it relates to this role.
-      8. Paragraph 3: Express genuine interest in the company/role in one sentence, then close with availability for interview in one sentence. Do NOT include phone number or email here — they are already in the header.
+      8. Paragraph 3: Express genuine interest in the company/role, then close with availability for interview — but follow this exact closing approach for THIS letter, and no other: ${chosenClosing} Do NOT include phone number or email here — they are already in the header.
       9. Close with "Sincerely," then the applicant's name.
       10. No bullet points, no bold text, no em dashes, no placeholders.
       11. Only mention GPA if it is 3.0 or above; omit the "/4.0" scale.
@@ -164,9 +199,9 @@ exports.handler = async (event, context) => {
       VOICE — SOUND LIKE A REAL PERSON, NOT AN AI OR AN HR TEMPLATE:
       Act like a seasoned, empathetic ghostwriter, not an HR bot or a LinkedIn-influencer voice. Write in a warm, confident, first-person voice — like a thoughtful professional explaining themselves over coffee, not a keyword list.
       - Vary sentence length on purpose within each paragraph: mix one short, punchy sentence with one longer, more detailed one. It's fine, occasionally, to start a sentence with "And," "But," or "So" if it reads naturally — don't force it into every paragraph.
-      - Use natural connective phrases where they fit honestly, e.g. "What drew me to this role is...", "I found myself drawn to...", rather than starting every sentence the same structural way.
+      - Invent your own connective phrasing for this letter rather than leaning on any fixed phrase — vary it every time so two different letters never share the same transition.
       - Don't just list the CV — narrate it in miniature: what you did, why it mattered, what the result was. One concrete detail beats three vague claims.
-      - Never use stock opening/closing lines like "I am writing to apply," "I am a hard-working team player," or "In my previous role, I was responsible for." Also avoid other AI-sounding buzzwords and filler — "I am confident," "leverage my skills," "dynamic team," "excited to apply" — for the same reason. Prefer specific, active verbs (led, untangled, rebuilt, championed) over generic ones (managed, did, worked, handled) — but don't force an unusual verb where a plain one is clearer; it should still sound like something a person would actually say, not a thesaurus.
+      - BANNED — never use these, or anything that reads as the same construction with different words, anywhere in the letter: "I am writing to apply," "I'm applying for the ... role because," "I am a hard-working team player," "In my previous role, I was responsible for," "What drew me to this role is," "I found myself drawn to," "I am available for an interview at whatever/any time that suits you," "I am confident," "leverage my skills," "dynamic team," "excited to apply." These phrases have already shown up across multiple different applicants' letters from this same writer, which is exactly what must never happen again — every letter has to sound like it came from a different person who has never seen the others. Prefer specific, active verbs (led, untangled, rebuilt, championed) over generic ones (managed, did, worked, handled) — but don't force an unusual verb where a plain one is clearer; it should still sound like something a person would actually say, not a thesaurus.
       - The result should read as if a sharp, slightly informal professional wrote it in one sitting: polished enough to send, natural enough that no two letters sound alike.
       - None of the above overrides the STRICT GUIDELINES above — the paragraph count, header format, and phone/email placement rules always win over stylistic choices.
       ${sanitizedExtraPrompt ? `
